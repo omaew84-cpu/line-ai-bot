@@ -1,0 +1,1 @@
+   {"name":"line-bot","version":"1.0.0","dependencies":{"@line/bot-sdk":"^9.0.0","next":"14.0.0"}}
