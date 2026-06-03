@@ -1,55 +1,38 @@
-import crypto from 'crypto';
+// วางที่: /api/webhook.js
+const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(200).send('OK');
-  }
-
-  const signature = req.headers['x-line-signature'];
-  const body = JSON.stringify(req.body);
+  if (req.method === 'GET') return res.send('OK');
   
-  const hash = crypto
-    .createHmac('SHA256', process.env.LINE_CHANNEL_SECRET)
-    .update(body)
-    .digest('base64');
-    
-  if (hash !== signature) {
-    return res.status(401).send('Unauthorized');
-  }
-
-  const events = req.body.events;
+  const events = req.body.events || [];
   
-  for (const event of events) {
-    if (event.type === 'message' && event.message.type === 'text') {
-      const userMessage = event.message.text;
-      const replyToken = event.replyToken;
+  for (const e of events) {
+    if (e.type === 'message' && e.message.type === 'text') {
+      const msg = e.message.text.toLowerCase();
+      let reply = '';
       
-      // AI ตอบกลับแบบฉลาด
-      let replyText = '';
-      
-      if (userMessage.includes('สวัสดี') || userMessage.includes('หวัดดี')) {
-        replyText = 'สวัสดีครับ! ผมเป็นบอท AI ยินดีช่วยเหลือครับ 😊';
-      } else if (userMessage.includes('ชื่อ')) {
-        replyText = 'ผมชื่อ AI Bot ครับ สร้างด้วย Vercel + LINE';
-      } else if (userMessage.includes('ทำอะไรได้')) {
-        replyText = 'ผมตอบคำถาม คุยเล่น ช่วยเหลือได้ครับ ลองถามมาเลย!';
+      if (msg.includes('สวัสดี') || msg.includes('ไง')) {
+        reply = 'สวัสดีค่ะ 🙏 ยินดีต้อนรับสู่ Maewai AI\nพิมพ์ "ราคา" ดูสินค้าได้เลย';
+      } else if (msg.includes('ราคา')) {
+        reply = '💰 แพ็กเกจ ฿299 / ฿599 / ฿1,299\nสนใจพิมพ์ "สั่งซื้อ"';
+      } else if (msg.includes('สั่ง')) {
+        reply = 'รับออเดอร์ค่ะ! แจ้งชื่อ-ที่อยู่-เบอร์ได้เลย';
       } else {
-        replyText = `คุณพูดว่า: "${userMessage}"\n\nผมเข้าใจแล้วครับ มีอะไรให้ช่วยอีกไหม?`;
+        reply = `รับทราบ: "${e.message.text}"\nแอดมินตอบกลับเร็วๆ นี้`;
       }
       
       await fetch('https://api.line.me/v2/bot/message/reply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`
+          'Authorization': `Bearer ${TOKEN}`
         },
         body: JSON.stringify({
-          replyToken: replyToken,
-          messages: [{ type: 'text', text: replyText }]
+          replyToken: e.replyToken,
+          messages: [{ type: 'text', text: reply }]
         })
       });
     }
   }
-  
-  res.status(200).send('OK');
+  res.status(200).json({ ok: true });
 }
